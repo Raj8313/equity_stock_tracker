@@ -1,0 +1,40 @@
+# Configuration for Single-Stock Intraday Prediction Desktop App
+# Target Market: NSE India (Equity Cash Segment)
+
+ticker: "TMPV.NS"              # Tata Motors Passenger Vehicles (post-demerger NSE ticker)
+sector_ticker: "^CNXAUTO"       # Nifty Auto benchmark index
+benchmark_ticker: "^NSEI"      # Nifty 50 benchmark index
+timeframe: "15m"
+lookback_days: 60              # Maximum available intraday window via yfinance
+
+trading:
+  capital: 10000.0             # User account trading capital (INR)
+  risk_per_trade_pct: 0.01     # 1% max daily risk (INR 100 on 10k)
+  target_profit_pct: 0.0075    # Upper barrier: +0.75%
+  stop_loss_pct: 0.0040        # Lower barrier: -0.40%
+  max_holding_bars: 4          # 4 x 15m candles = 60 minutes time barrier
+  entry_cutoff_time: "14:15"   # No entries after 14:15 IST (prevents broker auto square-off)
+  market_open_time: "09:15"
+  market_close_time: "15:30"
+  min_reward_risk_ratio: 1.5   # Net profit after taxes must be >= 1.5x net risk
+
+statutory_taxes:
+  brokerage_pct: 0.0003        # min(0.03% of turnover, INR 20) per leg
+  brokerage_max_per_leg: 20.0
+  stt_sell_pct: 0.00025        # 0.025% on intraday sell leg only
+  nse_txn_charge_pct: 0.0000297 # 0.00297% on total round-trip turnover
+  sebi_fee_pct: 0.000001       # 0.0001% on total round-trip turnover
+  stamp_duty_buy_pct: 0.00003  # 0.003% on buy leg only
+  gst_pct: 0.18                # 18% on (Brokerage + NSE Charge + SEBI Fee)
+
+database:
+  path: "data/market_data.db"
+
+model:
+  path: "models/tatamotors_xgb_v1.joblib"
+  high_conviction_threshold: 0.70
+  watchlist_threshold: 0.60
+
+sentiment:
+  query: "Tata Motors"
+  veto_threshold: -0.30        # Sentiment <= -0.30 blocks all BUY trades
