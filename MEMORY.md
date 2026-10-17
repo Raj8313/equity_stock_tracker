@@ -81,3 +81,6 @@
 8. **Hotkey Callback Signature Handling:**
    * `lightweight-charts` passes the triggered key string to hotkey handlers.
    * `toggle_view(*args, **kwargs)` accepts variable arguments to cleanly support hotkeys, table cell clicks, and direct invocation.
+9. **Git Repository Setup:**
+   * Initialized repository on branch `main` with `.gitignore` (protecting `.venv`, `data/market_data.db`, and caches).
+   * Remote configured: `origin -> https://github.com/Raj8313/equity_stock_tracker.git`.
