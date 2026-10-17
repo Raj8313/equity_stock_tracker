@@ -133,6 +133,65 @@ def launch_desktop_app(replay_mode: bool = False):
     # Set Top Watermark
     chart.watermark(f"{ticker} 15M", color='rgba(255, 255, 255, 0.05)')
 
+    # TopBar Direct GUI Controls (View Switcher & Zoom Controls)
+    def on_view_switch(ch):
+        val = ch.topbar.get("view_switcher").value
+        if "Line" in val:
+            chart.hide_data()
+            price_line.show_data()
+            view_state["mode"] = "line"
+            logger.info("Switched to Line Graph View")
+            if toggle_row_ref[0]:
+                toggle_row_ref[0]['Value'] = "📈 Line Graph"
+                toggle_row_ref[0].background_color('Value', '#2962FF')
+        else:
+            price_line.hide_data()
+            chart.show_data()
+            view_state["mode"] = "candle"
+            logger.info("Switched to Candlestick View")
+            if toggle_row_ref[0]:
+                toggle_row_ref[0]['Value'] = "📊 Candlestick"
+                toggle_row_ref[0].background_color('Value', '#089981')
+
+    def on_zoom_in(ch):
+        ch.run_script(f'''
+        (() => {{
+            const ts = {ch.id}.chart.timeScale();
+            const range = ts.getVisibleLogicalRange();
+            if (range) {{
+                const delta = (range.to - range.from) * 0.20;
+                ts.setVisibleLogicalRange({{ from: range.from + delta, to: range.to - delta }});
+            }}
+        }})();
+        ''')
+
+    def on_zoom_out(ch):
+        ch.run_script(f'''
+        (() => {{
+            const ts = {ch.id}.chart.timeScale();
+            const range = ts.getVisibleLogicalRange();
+            if (range) {{
+                const delta = (range.to - range.from) * 0.25;
+                ts.setVisibleLogicalRange({{ from: range.from - delta, to: range.to + delta }});
+            }}
+        }})();
+        ''')
+
+    def on_reset_view(ch):
+        ch.fit()
+        ch.time_scale(right_offset=5)
+
+    chart.topbar.switcher(
+        name="view_switcher",
+        options=('📊 Candlesticks', '📈 Line Graph'),
+        default='📊 Candlesticks',
+        align='left',
+        func=on_view_switch
+    )
+    chart.topbar.button(name="zoom_in", button_text="🔍 + Zoom In", align='left', func=on_zoom_in)
+    chart.topbar.button(name="zoom_out", button_text="🔍 - Zoom Out", align='left', func=on_zoom_out)
+    chart.topbar.button(name="reset_view", button_text="↺ Reset View", align='left', func=on_reset_view)
+
     # Chart View Mode Toggle Handler
     view_state = {"mode": "candle"}
     toggle_row_ref = [None]
@@ -145,7 +204,7 @@ def launch_desktop_app(replay_mode: bool = False):
             view_state["mode"] = "line"
             logger.info("Switched to Line Graph View")
             if target_row:
-                target_row['Value'] = "📈 Line Graph (Click to switch)"
+                target_row['Value'] = "📈 Line Graph"
                 target_row.background_color('Value', '#2962FF')
                 target_row.text_color('Value', '#ffffff')
         else:
@@ -154,7 +213,7 @@ def launch_desktop_app(replay_mode: bool = False):
             view_state["mode"] = "candle"
             logger.info("Switched to Candlestick View")
             if target_row:
-                target_row['Value'] = "📊 Candlestick (Click to switch)"
+                target_row['Value'] = "📊 Candlestick"
                 target_row.background_color('Value', '#089981')
                 target_row.text_color('Value', '#ffffff')
 
@@ -168,7 +227,7 @@ def launch_desktop_app(replay_mode: bool = False):
         return_clicked_cells=True,
         func=toggle_view
     )
-    toggle_row = table.new_row('Chart Mode [Key: V]', '📊 Candlestick (Click to switch)')
+    toggle_row = table.new_row('Chart Mode [Key: V]', '📊 Candlestick')
     toggle_row.background_color('Value', '#089981')
     toggle_row.text_color('Value', '#ffffff')
     toggle_row_ref[0] = toggle_row
