@@ -75,9 +75,13 @@
    * Pandas 3.0 defaults timestamps to microseconds (`datetime64[us]`). `lightweight-charts` divides integer timestamps by $10^9$ assuming nanoseconds (`datetime64[ns]`).
    * This previously caused timestamps to collapse to the year 1970 (`1784798`), rendering a blank chart.
    * Rule: Always explicitly cast timestamps to `.astype('datetime64[ns]')` before passing dataframes to `chart.set()` or `line.set()`.
-7. **Chart Mode Toggle (Candlestick ⇄ Line Graph):**
-   * Added dual-mode visualizer in `main_desktop.py`.
-   * Can be toggled interactively by clicking the top row in the HUD table or by pressing hotkey **`V`** or **`G`** on the keyboard.
+7. **TopBar Direct GUI Controls (Buttons & Switcher):**
+   * Added a native control bar directly on top of the chart canvas in `main_desktop.py`.
+   * **View Switcher:** `[ 📊 Candlesticks | 📈 Line Graph ]` segmented button.
+   * **Zoom In:** `[ 🔍 + Zoom In ]` button (zooms in 20% on visible logical range).
+   * **Zoom Out:** `[ 🔍 - Zoom Out ]` button (zooms out 25% on visible range).
+   * **Reset View:** `[ ↺ Reset View ]` button (auto-fits the entire chart nicely).
+   * Also synchronized with hotkeys (`V` / `G`) and table row clicks.
 8. **Hotkey Callback Signature Handling:**
    * `lightweight-charts` passes the triggered key string to hotkey handlers.
    * `toggle_view(*args, **kwargs)` accepts variable arguments to cleanly support hotkeys, table cell clicks, and direct invocation.
