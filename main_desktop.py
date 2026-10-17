@@ -197,46 +197,89 @@ def launch_desktop_app(replay_mode: bool = False):
     unique_dates = sorted(df_features['timestamp'].dt.date.unique())
 
     def set_period_range(selected: str):
-        logger.info(f"Applying time range: {selected}")
+        logger.info(f"Strictly restricting chart data to period: {selected}")
         date_widget = chart.topbar.get("selected_period_date")
         try:
             if "Present Day" in selected or "Today" in selected:
-                target = unique_dates[-1]
-                chart.set_visible_range(f"{target} 09:15:00", f"{target} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 Session: {target.strftime('%d %b %Y')}")
+                target_date = unique_dates[-1]
+                mask = df_features['timestamp'].dt.date == target_date
+                date_label = f"📅 Session: {target_date.strftime('%d %b %Y')}"
             elif "Previous Day" in selected:
-                target = unique_dates[-2] if len(unique_dates) >= 2 else unique_dates[-1]
-                chart.set_visible_range(f"{target} 09:15:00", f"{target} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 Session: {target.strftime('%d %b %Y')}")
+                target_date = unique_dates[-2] if len(unique_dates) >= 2 else unique_dates[-1]
+                mask = df_features['timestamp'].dt.date == target_date
+                date_label = f"📅 Session: {target_date.strftime('%d %b %Y')}"
             elif "3 Days" in selected:
-                target = unique_dates[-3] if len(unique_dates) >= 3 else unique_dates[0]
-                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 {target.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}")
+                start_date = unique_dates[-3] if len(unique_dates) >= 3 else unique_dates[0]
+                mask = df_features['timestamp'].dt.date >= start_date
+                date_label = f"📅 {start_date.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}"
             elif "Last Week" in selected:
-                target = unique_dates[-5] if len(unique_dates) >= 5 else unique_dates[0]
-                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 {target.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}")
+                start_date = unique_dates[-5] if len(unique_dates) >= 5 else unique_dates[0]
+                mask = df_features['timestamp'].dt.date >= start_date
+                date_label = f"📅 {start_date.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}"
             elif "Last Month" in selected:
-                target = unique_dates[-20] if len(unique_dates) >= 20 else unique_dates[0]
-                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 {target.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}")
+                start_date = unique_dates[-20] if len(unique_dates) >= 20 else unique_dates[0]
+                mask = df_features['timestamp'].dt.date >= start_date
+                date_label = f"📅 {start_date.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}"
             elif "3 Months" in selected:
-                target = unique_dates[-60] if len(unique_dates) >= 60 else unique_dates[0]
-                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
-                if date_widget:
-                    date_widget.set(f"📅 {target.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}")
-            else:  # All Data
-                chart.fit()
-                chart.time_scale(right_offset=5)
-                if date_widget:
-                    date_widget.set(f"📅 Range: {unique_dates[0].strftime('%d %b %Y')} – {unique_dates[-1].strftime('%d %b %Y')}")
+                start_date = unique_dates[-60] if len(unique_dates) >= 60 else unique_dates[0]
+                mask = df_features['timestamp'].dt.date >= start_date
+                date_label = f"📅 {start_date.strftime('%d %b')} – {unique_dates[-1].strftime('%d %b %Y')}"
+            else:  # All Data (60D)
+                mask = pd.Series([True] * len(df_features), index=df_features.index)
+                date_label = f"📅 Range: {unique_dates[0].strftime('%d %b %Y')} – {unique_dates[-1].strftime('%d %b %Y')}"
+
+            if date_widget:
+                date_widget.set(date_label)
+
+            period_df = df_features[mask].copy().reset_index(drop=True)
+            if period_df.empty:
+                period_df = df_features.copy()
+
+            # Strictly restrict candlestick data to selected period
+            c_df = period_df[['timestamp', 'open', 'high', 'low', 'close', 'volume']].copy()
+            c_df = c_df.rename(columns={'timestamp': 'date'})
+            c_df['date'] = pd.to_datetime(c_df['date']).astype('datetime64[ns]')
+            chart.set(c_df)
+
+            # Strictly restrict price line data to selected period
+            p_df = period_df[['timestamp', 'close']].rename(columns={'timestamp': 'date', 'close': 'Price'}).dropna()
+            p_df['date'] = pd.to_datetime(p_df['date']).astype('datetime64[ns]')
+            price_line.set(p_df)
+
+            # Strictly restrict VWAP line data to selected period
+            v_df = period_df[['timestamp', 'vwap']].rename(columns={'timestamp': 'date', 'vwap': 'VWAP'}).dropna()
+            v_df['date'] = pd.to_datetime(v_df['date']).astype('datetime64[ns]')
+            vwap_line.set(v_df)
+
+            # Preserve active view mode visibility (Candles vs Line)
+            if view_state["mode"] == "candle":
+                price_line.hide_data()
+                chart.show_data()
+            else:
+                chart.hide_data()
+                price_line.show_data()
+
+            # Refresh buy markers strictly for candles within this period
+            chart.clear_markers()
+            for idx, row in period_df.iterrows():
+                try:
+                    p = ml_engine.predict_live(row)
+                    if p.signal_type == "BUY":
+                        date_str = pd.to_datetime(row['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+                        chart.marker(
+                            time=date_str,
+                            position='below',
+                            shape='arrow_up',
+                            color='#089981',
+                            text=f"BUY {round(p.probability*100)}%"
+                        )
+                except Exception:
+                    pass
+
+            chart.fit()
+            chart.time_scale(right_offset=3)
         except Exception as e:
-            logger.warning(f"Error setting range: {e}")
+            logger.warning(f"Error filtering period range: {e}")
             chart.fit()
 
     def on_range_menu_change(ch):
@@ -256,21 +299,21 @@ def launch_desktop_app(replay_mode: bool = False):
     chart.topbar.menu(
         name="range_menu",
         options=(
-            '📅 Period: All Data (60D)',
             '📅 Period: Present Day (Today)',
             '📅 Period: Previous Day',
             '📅 Period: Last 3 Days',
             '📅 Period: Last Week (5D)',
             '📅 Period: Last Month (20D)',
-            '📅 Period: Last 3 Months (Max)'
+            '📅 Period: Last 3 Months (Max)',
+            '📅 Period: All Data (60D)'
         ),
-        default='📅 Period: All Data (60D)',
+        default='📅 Period: Present Day (Today)',
         align='left',
         func=on_range_menu_change
     )
 
     # 3. Selected Period Date Display (Replaced 1D/Prev/3D/1W/1M/All buttons)
-    initial_date_text = f"📅 Range: {unique_dates[0].strftime('%d %b %Y')} – {unique_dates[-1].strftime('%d %b %Y')}"
+    initial_date_text = f"📅 Session: {unique_dates[-1].strftime('%d %b %Y')}"
     chart.topbar.textbox(name="selected_period_date", initial_text=initial_date_text, align='left')
 
     # 4. Zoom & Reset Navigation Buttons
@@ -391,21 +434,8 @@ def launch_desktop_app(replay_mode: bool = False):
     net_row = table.new_row('Net Take-Home', f"Rs {eval_result.net_profit:.2f}")
     net_row.text_color('Value', '#00E676')
 
-    # Add signal markers on historical high-conviction signals (Last 300 bars)
-    for idx, row in df_features.tail(300).iterrows():
-        try:
-            p = ml_engine.predict_live(row)
-            if p.signal_type == "BUY":
-                date_str = pd.to_datetime(row['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
-                chart.marker(
-                    time=date_str,
-                    position='below',
-                    shape='arrow_up',
-                    color='#089981',
-                    text=f"BUY {round(p.probability*100)}%"
-                )
-        except Exception:
-            pass
+    # Initialize chart data strictly restricted to Present Day (Today) on startup
+    set_period_range('📅 Period: Present Day (Today)')
 
     print("\n" + "="*70)
     print(f"🚀 DESKTOP TRADING TERMINAL LAUNCHED: {ticker} (Tata Motors)")

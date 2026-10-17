@@ -105,4 +105,8 @@
      - Up-arrow BUY markers (`BUY 76%`, `BUY 88%`) placed under historical high-conviction breakout candles.
      - TopBar right-aligned live badge displaying ML Probability, Signal, Target, and Stop-Loss.
      - Color-coded HUD table rows (Green for BUY $\ge 70\%$, Amber for Watchlist $\ge 60\%$, Slate for WAIT).
+13. **Strict Period Data Restriction on Chart Series:**
+    * Rather than just adjusting the camera viewport with `chart.set_visible_range` (which left all 60 days on the canvas and allowed users to pan or scroll outside the period), `set_period_range` now strictly filters the underlying dataframes (`chart.set()`, `price_line.set()`, `vwap_line.set()`).
+    * The chart canvas is strictly bounded to the selected period (e.g., Present Day only contains that session's 25 candles from 09:15 to 15:30).
+    * Users cannot pan or zoom beyond the selected period boundary, preventing confusion. Markers are dynamically cleared and re-drawn strictly for the active window.
 
