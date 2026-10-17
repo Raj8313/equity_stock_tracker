@@ -87,7 +87,7 @@
    * `toggle_view(*args, **kwargs)` accepts variable arguments to cleanly support hotkeys, table cell clicks, and direct invocation.
 9. **Git Repository Setup:**
    * Initialized repository on branch `main` with `.gitignore` (protecting `.venv`, `data/market_data.db`, and caches).
-   * Remote configured: `origin -> https://github.com/Raj8313/equity_stock_tracker.git`.
+   * Remote configured: `origin -> git@github.com:Raj8313/equity_stock_tracker.git` (SSH).
 10. **Interactive Chart Legend Enabled:**
    * Configured `chart.legend()` in `main_desktop.py`.
    * Displays hovered candle's Open, High, Low, Close (OHLC), percentage change (color-coded green/red), and live values of VWAP and Price lines.
