@@ -6,6 +6,7 @@ Supports live market monitoring (Mon-Fri) and weekend replay simulation mode (--
 """
 
 import argparse
+import asyncio
 import os
 import sys
 import time
@@ -454,11 +455,19 @@ def launch_desktop_app(replay_mode: bool = False):
     print("="*70 + "\n")
 
     # Render desktop window
-    chart.show(block=True)
+    try:
+        chart.show(block=True)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tata Motors Intraday Prediction Desktop App")
     parser.add_argument("--replay", action="store_true", help="Run simulated replay of last trading session")
     args = parser.parse_args()
-    launch_desktop_app(replay_mode=args.replay)
+    try:
+        launch_desktop_app(replay_mode=args.replay)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
+    finally:
+        print("\n👋 Desktop Terminal closed safely. Goodbye!\n")
