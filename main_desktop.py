@@ -278,6 +278,13 @@ def launch_desktop_app(replay_mode: bool = False):
     chart.topbar.button(name="zoom_out", button_text="🔍 -", align='left', func=on_zoom_out)
     chart.topbar.button(name="reset_view", button_text="↺ Reset", align='left', func=on_reset_view)
 
+    # 5. Live Probability Prediction TopBar Badge
+    chart.topbar.textbox(
+        name="ml_prediction_badge",
+        initial_text=f"🤖 ML Probability: {confidence_pct}% [{pred.signal_type}] | 🎯 Target: Rs {pred.target_price:.2f} | 🛑 SL: Rs {pred.stop_loss_price:.2f}",
+        align='right'
+    )
+
     # Chart View Mode Toggle Handler
     view_state = {"mode": "candle"}
     toggle_row_ref = [None]
@@ -303,6 +310,29 @@ def launch_desktop_app(replay_mode: bool = False):
                 target_row.background_color('Value', '#089981')
                 target_row.text_color('Value', '#ffffff')
 
+    # Add Target, Stop-Loss and Entry Horizontal Lines on Chart Canvas
+    chart.horizontal_line(
+        price=pred.target_price,
+        color='#089981',
+        width=2,
+        style='dashed',
+        text=f"🎯 Target (+0.75%): Rs {pred.target_price:.2f}"
+    )
+    chart.horizontal_line(
+        price=pred.stop_loss_price,
+        color='#f23645',
+        width=2,
+        style='dashed',
+        text=f"🛑 Stop Loss (-0.40%): Rs {pred.stop_loss_price:.2f}"
+    )
+    chart.horizontal_line(
+        price=pred.entry_price,
+        color='#2962FF',
+        width=1,
+        style='dotted',
+        text=f"⚡ Last / Entry: Rs {pred.entry_price:.2f}"
+    )
+
     # Interactive HUD Metrics Table on Right Panel (Click any cell to toggle view)
     table = chart.create_table(
         width=0.25,
@@ -326,18 +356,43 @@ def launch_desktop_app(replay_mode: bool = False):
     table.new_row('Market Status', market_status)
     table.new_row('Last Candle', str(latest_row['timestamp'])[:16])
     table.new_row('Last Price', f"Rs {pred.entry_price:.2f}")
-    table.new_row('Win Probability', f"{confidence_pct}%")
-    table.new_row('Model Decision', str(pred.signal_type))
+
+    # Color-coded ML Probability & Decision Rows
+    prob_row = table.new_row('Win Probability', f"{confidence_pct}%")
+    dec_row = table.new_row('Model Decision', str(pred.signal_type))
+    if pred.signal_type == "BUY":
+        prob_row.background_color('Value', '#089981')
+        prob_row.text_color('Value', '#ffffff')
+        dec_row.background_color('Value', '#089981')
+        dec_row.text_color('Value', '#ffffff')
+    elif pred.signal_type == "WATCHLIST":
+        prob_row.background_color('Value', '#f59e0b')
+        prob_row.text_color('Value', '#000000')
+        dec_row.background_color('Value', '#f59e0b')
+        dec_row.text_color('Value', '#000000')
+    else:
+        prob_row.background_color('Value', '#2a2e39')
+        prob_row.text_color('Value', '#9ca3af')
+        dec_row.background_color('Value', '#2a2e39')
+        dec_row.text_color('Value', '#f87171')
+
     table.new_row('News Sentiment', f"{sentiment_res.overall_score:+.2f} ({'VETO' if sentiment_res.is_veto_active else 'CLEAR'})")
-    table.new_row('Target (+0.75%)', f"Rs {pred.target_price:.2f}")
-    table.new_row('Stop Loss (-0.40%)', f"Rs {pred.stop_loss_price:.2f}")
+    
+    tgt_row = table.new_row('Target (+0.75%)', f"Rs {pred.target_price:.2f}")
+    tgt_row.text_color('Value', '#089981')
+
+    sl_row = table.new_row('Stop Loss (-0.40%)', f"Rs {pred.stop_loss_price:.2f}")
+    sl_row.text_color('Value', '#f23645')
+
     table.new_row('Recommended Qty', f"{eval_result.quantity} shares")
     table.new_row('Gross Target Profit', f"Rs {eval_result.gross_profit:.2f}")
     table.new_row('Taxes & Brokerage', f"Rs {eval_result.total_fees_and_taxes:.2f}")
-    table.new_row('Net Take-Home', f"Rs {eval_result.net_profit:.2f}")
+    
+    net_row = table.new_row('Net Take-Home', f"Rs {eval_result.net_profit:.2f}")
+    net_row.text_color('Value', '#00E676')
 
-    # Add signal markers on historical high-conviction signals
-    for idx, row in df_features.tail(60).iterrows():
+    # Add signal markers on historical high-conviction signals (Last 300 bars)
+    for idx, row in df_features.tail(300).iterrows():
         try:
             p = ml_engine.predict_live(row)
             if p.signal_type == "BUY":

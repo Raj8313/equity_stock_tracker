@@ -95,3 +95,14 @@
    * Configured `topbar.menu` dropdown selector: `Present Day`, `Previous Day`, `Last 3 Days`, `Last Week (5D)`, `Last Month (20D)`, `Last 3 Months`, `All Data (60D)`.
    * Replaced redundant quick buttons with a dynamic `selected_period_date` textbox widget in the header.
    * Dynamically displays the exact active market date (e.g., `📅 Session: 16 Oct 2026`) or date range (e.g., `📅 14 Oct – 16 Oct 2026`) whenever a period is chosen.
+12. **Machine Learning Probability Prediction & Chart Overlays:**
+   * **Class Imbalance & Base Rate:** Across 1,497 15m candles, only 147 candles (~9.8%) achieve a +0.75% profit target before hitting -0.40% stop loss. Unweighted sigmoid calibration previously compressed output probabilities to ~8%-15%, preventing signals from reaching $\ge 70\%$ thresholds.
+   * **Balanced Boosting Fix:** Configured `class_weight='balanced'` on the gradient boosting engine so that predictions span the full 0% to 100% conviction range.
+   * **Visual Overlays on Canvas:**
+     - Horizontal dashed green line for predicted Target (+0.75%).
+     - Horizontal dashed red line for predicted Stop-Loss (-0.40%).
+     - Horizontal dotted blue line for Entry / Last Price.
+     - Up-arrow BUY markers (`BUY 76%`, `BUY 88%`) placed under historical high-conviction breakout candles.
+     - TopBar right-aligned live badge displaying ML Probability, Signal, Target, and Stop-Loss.
+     - Color-coded HUD table rows (Green for BUY $\ge 70\%$, Amber for Watchlist $\ge 60\%$, Slate for WAIT).
+

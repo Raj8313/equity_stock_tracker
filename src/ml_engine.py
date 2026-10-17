@@ -179,31 +179,32 @@ class MLEngine:
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
         
-        # Base gradient booster with conservative hyperparameters to prevent overfitting
+        pos_ratio = float((y_train == 0).sum() / max(1, (y_train == 1).sum()))
         if XGB_AVAILABLE:
-            base_model = XGBClassifier(
+            model = XGBClassifier(
                 n_estimators=100,
                 max_depth=4,
                 learning_rate=0.05,
                 subsample=0.8,
                 colsample_bytree=0.8,
+                scale_pos_weight=pos_ratio,
                 random_state=42,
                 eval_metric="logloss"
             )
         else:
-            base_model = HistGradientBoostingClassifier(
+            model = HistGradientBoostingClassifier(
                 max_iter=100,
                 max_depth=4,
                 learning_rate=0.05,
+                class_weight='balanced',
                 random_state=42
             )
         
-        # Calibrated classifier for reliable real-world probabilities
-        calibrated_model = CalibratedClassifierCV(estimator=base_model, method="sigmoid", cv=3)
-        calibrated_model.fit(X_train, y_train)
+        # Fit on training split
+        model.fit(X_train, y_train)
         
         # Evaluate on out-of-sample chronological test set
-        test_probs = calibrated_model.predict_proba(X_test)[:, 1]
+        test_probs = model.predict_proba(X_test)[:, 1]
         test_preds = (test_probs >= self.high_conviction_threshold).astype(int)
         
         total_signals = int(test_preds.sum())
@@ -220,8 +221,28 @@ class MLEngine:
             auc = 0.5
             
         # Refit on entire dataset for production inference
-        calibrated_model.fit(X, y)
-        self.model = calibrated_model
+        if XGB_AVAILABLE:
+            full_pos_ratio = float((y == 0).sum() / max(1, (y == 1).sum()))
+            prod_model = XGBClassifier(
+                n_estimators=100,
+                max_depth=4,
+                learning_rate=0.05,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                scale_pos_weight=full_pos_ratio,
+                random_state=42,
+                eval_metric="logloss"
+            )
+        else:
+            prod_model = HistGradientBoostingClassifier(
+                max_iter=100,
+                max_depth=4,
+                learning_rate=0.05,
+                class_weight='balanced',
+                random_state=42
+            )
+        prod_model.fit(X, y)
+        self.model = prod_model
         
         # Save model artifact
         joblib.dump(self.model, self.model_path)
