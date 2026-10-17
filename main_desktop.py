@@ -321,12 +321,8 @@ def launch_desktop_app(replay_mode: bool = False):
     chart.topbar.button(name="zoom_out", button_text="🔍 -", align='left', func=on_zoom_out)
     chart.topbar.button(name="reset_view", button_text="↺ Reset", align='left', func=on_reset_view)
 
-    # 5. Live Probability Prediction TopBar Badge
-    chart.topbar.textbox(
-        name="ml_prediction_badge",
-        initial_text=f"🤖 ML Probability: {confidence_pct}% [{pred.signal_type}] | 🎯 Target: Rs {pred.target_price:.2f} | 🛑 SL: Rs {pred.stop_loss_price:.2f}",
-        align='right'
-    )
+    # Ensure topbar date text does not wrap vertically
+    chart.run_script("document.querySelectorAll('.topbar-textbox').forEach(el => { el.style.whiteSpace = 'nowrap'; el.style.fontSize = '14px'; });")
 
     # Chart View Mode Toggle Handler
     view_state = {"mode": "candle"}
@@ -395,12 +391,26 @@ def launch_desktop_app(replay_mode: bool = False):
     chart.hotkey(None, 'v', toggle_view)
     chart.hotkey(None, 'g', toggle_view)
 
+    # --- SECTION 1: EXECUTION & ACCOUNT SIZING ---
     table.new_row('Stock', f"Tata Motors ({ticker})")
     table.new_row('Market Status', market_status)
     table.new_row('Last Candle', str(latest_row['timestamp'])[:16])
     table.new_row('Last Price', f"Rs {pred.entry_price:.2f}")
+    table.new_row('Order Quantity', f"{eval_result.quantity} shares")
+    table.new_row('Gross Target Profit', f"Rs {eval_result.gross_profit:.2f}")
+    table.new_row('Taxes & Brokerage', f"Rs {eval_result.total_fees_and_taxes:.2f}")
+    
+    net_row = table.new_row('Net Take-Home', f"Rs {eval_result.net_profit:.2f}")
+    net_row.text_color('Value', '#00E676')
 
-    # Color-coded ML Probability & Decision Rows
+    # --- SECTION 2: 🤖 ML PREDICTION & DECISION ENGINE ---
+    # (Moved from topbar to lower section of right panel)
+    ml_header = table.new_row('── 🤖 ML PREDICTION ENGINE ──', '──────────────')
+    ml_header.background_color('Decision Metric', '#1e293b')
+    ml_header.text_color('Decision Metric', '#38bdf8')
+    ml_header.background_color('Value', '#1e293b')
+    ml_header.text_color('Value', '#38bdf8')
+
     prob_row = table.new_row('Win Probability', f"{confidence_pct}%")
     dec_row = table.new_row('Model Decision', str(pred.signal_type))
     if pred.signal_type == "BUY":
@@ -419,20 +429,18 @@ def launch_desktop_app(replay_mode: bool = False):
         dec_row.background_color('Value', '#2a2e39')
         dec_row.text_color('Value', '#f87171')
 
-    table.new_row('News Sentiment', f"{sentiment_res.overall_score:+.2f} ({'VETO' if sentiment_res.is_veto_active else 'CLEAR'})")
-    
-    tgt_row = table.new_row('Target (+0.75%)', f"Rs {pred.target_price:.2f}")
+    tgt_row = table.new_row('🎯 Target (+0.75%)', f"Rs {pred.target_price:.2f}")
     tgt_row.text_color('Value', '#089981')
 
-    sl_row = table.new_row('Stop Loss (-0.40%)', f"Rs {pred.stop_loss_price:.2f}")
+    sl_row = table.new_row('🛑 Stop Loss (-0.40%)', f"Rs {pred.stop_loss_price:.2f}")
     sl_row.text_color('Value', '#f23645')
 
-    table.new_row('Recommended Qty', f"{eval_result.quantity} shares")
-    table.new_row('Gross Target Profit', f"Rs {eval_result.gross_profit:.2f}")
-    table.new_row('Taxes & Brokerage', f"Rs {eval_result.total_fees_and_taxes:.2f}")
-    
-    net_row = table.new_row('Net Take-Home', f"Rs {eval_result.net_profit:.2f}")
-    net_row.text_color('Value', '#00E676')
+    table.new_row('Reward / Risk', f"{eval_result.net_reward_risk_ratio:.2f}x")
+    table.new_row('News Sentiment', f"{sentiment_res.overall_score:+.2f} ({'VETO' if sentiment_res.is_veto_active else 'CLEAR'})")
+    table.new_row('VWAP Distance', f"{latest_row['vwap_dist_pct']:+.2f}% vs VWAP")
+    table.new_row('RSI (14)', f"{latest_row['rsi_14']:.1f}")
+    table.new_row('Relative Volume', f"{latest_row['rvol']:.2f}x")
+    table.new_row('Sector Strength', f"{latest_row['rel_strength']:+.2f}% vs Auto")
 
     # Initialize chart data strictly restricted to Present Day (Today) on startup
     set_period_range('📅 Period: Present Day (Today)')

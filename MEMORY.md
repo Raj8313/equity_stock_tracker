@@ -109,4 +109,9 @@
     * Rather than just adjusting the camera viewport with `chart.set_visible_range` (which left all 60 days on the canvas and allowed users to pan or scroll outside the period), `set_period_range` now strictly filters the underlying dataframes (`chart.set()`, `price_line.set()`, `vwap_line.set()`).
     * The chart canvas is strictly bounded to the selected period (e.g., Present Day only contains that session's 25 candles from 09:15 to 15:30).
     * Users cannot pan or zoom beyond the selected period boundary, preventing confusion. Markers are dynamically cleared and re-drawn strictly for the active window.
+14. **TopBar De-Clutter & Right HUD Organization:**
+    * Removed crowded ML badge from the topbar, restoring horizontal breathing room and preventing vertical multi-line text wrapping on the date display.
+    * Added `.style.whiteSpace = 'nowrap'` on `.topbar-textbox` to enforce single-line layout.
+    * Moved ML Probability, Decision, Target, Stop-Loss, Net Reward/Risk, and Feature metrics into a dedicated **🤖 ML PREDICTION ENGINE** section in the lower half of the right HUD table, filling the previously empty space cleanly.
+
 
