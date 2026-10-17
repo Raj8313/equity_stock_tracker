@@ -109,6 +109,18 @@ def launch_desktop_app(replay_mode: bool = False):
     chart.candle_style(up_color='#089981', down_color='#f23645', border_up_color='#089981', border_down_color='#f23645', wick_up_color='#089981', wick_down_color='#f23645')
     chart.grid(vert_enabled=True, horz_enabled=True, color='rgba(42, 46, 57, 0.4)')
 
+    # Enable Interactive Chart Legend (OHLC values, %, VWAP, and Price Line)
+    chart.legend(
+        visible=True,
+        ohlc=True,
+        percent=True,
+        lines=True,
+        color_based_on_candle=True,
+        font_size=12,
+        font_family="Monaco, -apple-system, BlinkMacSystemFont, sans-serif",
+        text=f"NSE: {ticker} (Tata Motors) | 15M"
+    )
+
     # Format chart dataframe: date, open, high, low, close, volume
     chart_df = df_features[['timestamp', 'open', 'high', 'low', 'close', 'volume']].copy()
     chart_df = chart_df.rename(columns={'timestamp': 'date'})
