@@ -193,6 +193,42 @@ def launch_desktop_app(replay_mode: bool = False):
         ch.fit()
         ch.time_scale(right_offset=5)
 
+    # Time Range Period Selection Logic
+    unique_dates = sorted(df_features['timestamp'].dt.date.unique())
+
+    def set_period_range(selected: str):
+        logger.info(f"Applying time range: {selected}")
+        try:
+            if "Present Day" in selected or "Today" in selected or selected == "1D":
+                target = unique_dates[-1]
+                chart.set_visible_range(f"{target} 09:15:00", f"{target} 15:30:00")
+            elif "Previous Day" in selected or selected == "Prev":
+                target = unique_dates[-2] if len(unique_dates) >= 2 else unique_dates[-1]
+                chart.set_visible_range(f"{target} 09:15:00", f"{target} 15:30:00")
+            elif "3 Days" in selected or selected == "3D":
+                target = unique_dates[-3] if len(unique_dates) >= 3 else unique_dates[0]
+                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
+            elif "Last Week" in selected or selected == "1W":
+                target = unique_dates[-5] if len(unique_dates) >= 5 else unique_dates[0]
+                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
+            elif "Last Month" in selected or selected == "1M":
+                target = unique_dates[-20] if len(unique_dates) >= 20 else unique_dates[0]
+                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
+            elif "3 Months" in selected or selected == "3M":
+                target = unique_dates[-60] if len(unique_dates) >= 60 else unique_dates[0]
+                chart.set_visible_range(f"{target} 09:15:00", f"{unique_dates[-1]} 15:30:00")
+            else:  # All Data
+                chart.fit()
+                chart.time_scale(right_offset=5)
+        except Exception as e:
+            logger.warning(f"Error setting range: {e}")
+            chart.fit()
+
+    def on_range_menu_change(ch):
+        val = ch.topbar.get("range_menu").value
+        set_period_range(val)
+
+    # 1. View Switcher (Candles vs Line)
     chart.topbar.switcher(
         name="view_switcher",
         options=('📊 Candlesticks', '📈 Line Graph'),
@@ -200,9 +236,36 @@ def launch_desktop_app(replay_mode: bool = False):
         align='left',
         func=on_view_switch
     )
-    chart.topbar.button(name="zoom_in", button_text="🔍 + Zoom In", align='left', func=on_zoom_in)
-    chart.topbar.button(name="zoom_out", button_text="🔍 - Zoom Out", align='left', func=on_zoom_out)
-    chart.topbar.button(name="reset_view", button_text="↺ Reset View", align='left', func=on_reset_view)
+
+    # 2. Time Range Customizable Dropdown Menu
+    chart.topbar.menu(
+        name="range_menu",
+        options=(
+            '📅 Period: All Data (60D)',
+            '📅 Period: Present Day (Today)',
+            '📅 Period: Previous Day',
+            '📅 Period: Last 3 Days',
+            '📅 Period: Last Week (5D)',
+            '📅 Period: Last Month (20D)',
+            '📅 Period: Last 3 Months (Max)'
+        ),
+        default='📅 Period: All Data (60D)',
+        align='left',
+        func=on_range_menu_change
+    )
+
+    # 3. Quick Period Jump Buttons
+    chart.topbar.button(name="btn_1d", button_text="1D", align='left', func=lambda ch: set_period_range("1D"))
+    chart.topbar.button(name="btn_prev", button_text="Prev", align='left', func=lambda ch: set_period_range("Prev"))
+    chart.topbar.button(name="btn_3d", button_text="3D", align='left', func=lambda ch: set_period_range("3D"))
+    chart.topbar.button(name="btn_1w", button_text="1W", align='left', func=lambda ch: set_period_range("1W"))
+    chart.topbar.button(name="btn_1m", button_text="1M", align='left', func=lambda ch: set_period_range("1M"))
+    chart.topbar.button(name="btn_all", button_text="All", align='left', func=lambda ch: set_period_range("All"))
+
+    # 4. Zoom & Reset Navigation Buttons
+    chart.topbar.button(name="zoom_in", button_text="🔍 +", align='left', func=on_zoom_in)
+    chart.topbar.button(name="zoom_out", button_text="🔍 -", align='left', func=on_zoom_out)
+    chart.topbar.button(name="reset_view", button_text="↺ Reset", align='left', func=on_reset_view)
 
     # Chart View Mode Toggle Handler
     view_state = {"mode": "candle"}
