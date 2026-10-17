@@ -91,3 +91,7 @@
 10. **Interactive Chart Legend Enabled:**
    * Configured `chart.legend()` in `main_desktop.py`.
    * Displays hovered candle's Open, High, Low, Close (OHLC), percentage change (color-coded green/red), and live values of VWAP and Price lines.
+11. **Time Range Customization (Dropdown Menu & Quick Jump Buttons):**
+   * Added `topbar.menu` dropdown selector: `Present Day`, `Previous Day`, `Last 3 Days`, `Last Week (5D)`, `Last Month (20D)`, `Last 3 Months`, `All Data (60D)`.
+   * Added TradingView-style quick jump buttons: `[ 1D ] [ Prev ] [ 3D ] [ 1W ] [ 1M ] [ All ]`.
+   * Calculates exact market dates dynamically from database and calls `chart.set_visible_range(...)`.
